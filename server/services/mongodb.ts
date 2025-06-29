@@ -60,6 +60,9 @@ export class MongoDBService {
 
   async updateOrganization(id: string, updates: UpdateOrganization): Promise<Organization | null> {
     try {
+      console.log("Updating organization with ID:", id);
+      console.log("Updates:", updates);
+      
       const result = await this.organizations.findOneAndUpdate(
         { _id: new ObjectId(id) },
         { 
@@ -71,9 +74,11 @@ export class MongoDBService {
         { returnDocument: 'after' }
       );
       
-      return result.value ? this.transformMongoDoc(result.value) : null;
+      console.log("Update result:", result);
+      return result ? this.transformMongoDoc(result) : null;
     } catch (error) {
-      return null;
+      console.error("MongoDB update error:", error);
+      throw error;
     }
   }
 

@@ -1,6 +1,6 @@
 import { users, organizations, type User, type InsertUser, type Organization, type InsertOrganization, type UpdateOrganization } from "@shared/schema";
 import { mongoService } from "./services/mongodb";
-
+import { ObjectId } from "mongodb";
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -55,10 +55,9 @@ export class MemStorage implements IStorage {
     return await mongoService.getAllOrganizations(limit, skip);
   }
 
-  async updateOrganization(id: string, updates: UpdateOrganization): Promise<Organization | null> {
-    return await mongoService.updateOrganization(id, updates);
-  }
-
+async updateOrganization(id: string, updates: UpdateOrganization): Promise<Organization | null> {
+  return await mongoService.updateOrganization(id, updates);
+}
   async deleteOrganization(id: string): Promise<boolean> {
     return await mongoService.deleteOrganization(id);
   }

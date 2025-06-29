@@ -2,13 +2,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertOrganizationSchema } from "@shared/schema";
 import { z } from "zod";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Save, X, FileUp } from "lucide-react";
+import { Save, X, FileUp, Plus, Trash2 } from "lucide-react";
 
 const formSchema = insertOrganizationSchema.extend({
   age: z.number().min(0).max(200),
@@ -45,6 +46,9 @@ export default function OrganizationForm({
   isLoading = false,
   readOnly = false,
 }: OrganizationFormProps) {
+  const [attachments, setAttachments] = useState<string[]>(initialData?.attachments || []);
+  const [newAttachment, setNewAttachment] = useState("");
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,8 +64,27 @@ export default function OrganizationForm({
     },
   });
 
+  const addAttachment = () => {
+    console.log("Add attachment clicked:", newAttachment.trim());
+    if (newAttachment.trim() && !attachments.includes(newAttachment.trim())) {
+      const updatedAttachments = [...attachments, newAttachment.trim()];
+      console.log("Updated attachments:", updatedAttachments);
+      setAttachments(updatedAttachments);
+      form.setValue("attachments", updatedAttachments);
+      setNewAttachment("");
+    } else {
+      console.log("Attachment not added - either empty or duplicate");
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    const updatedAttachments = attachments.filter((_, i) => i !== index);
+    setAttachments(updatedAttachments);
+    form.setValue("attachments", updatedAttachments);
+  };
+
   const onSubmit = (data: FormData) => {
-    onSave(data);
+    onSave({ ...data, attachments });
   };
 
   return (
@@ -142,7 +165,7 @@ export default function OrganizationForm({
                 <FormItem>
                   <FormLabel>Website</FormLabel>
                   <FormControl>
-                    <Input type="text" {...field} disabled={readOnly} />
+                    <Input type="text" {...field} disabled={readOnly} placeholder="e.g., www.example.com" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -198,15 +221,61 @@ export default function OrganizationForm({
 
             <div>
               <FormLabel>Attachments</FormLabel>
-              <div className="border border-dashed border-slate-300 rounded-lg p-4 mt-2">
-                <div className="text-center">
-                  <FileUp className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">
-                    {initialData?.attachments && initialData.attachments.length > 0
-                      ? `${initialData.attachments.length} attachment(s)`
-                      : "No attachments found in email"}
-                  </p>
-                </div>
+              <div className="border border-slate-200 rounded-lg p-4 mt-2 space-y-3">
+                {/* Add new attachment */}
+                {!readOnly && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter attachment URL or file path"
+                      value={newAttachment}
+                      onChange={(e) => setNewAttachment(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAttachment())}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addAttachment();
+                      }}
+                      disabled={!newAttachment.trim()}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  </div>
+                )}
+
+                {/* Display existing attachments */}
+                {attachments.length > 0 ? (
+                  <div className="space-y-2">
+                    {attachments.map((attachment, index) => (
+                      <div key={index} className="flex items-center justify-between bg-slate-50 p-2 rounded border">
+                        <span className="text-sm truncate flex-1 mr-2" title={attachment}>
+                          {attachment}
+                        </span>
+                        {!readOnly && (
+                          <Button
+                            type="button"
+                            onClick={() => removeAttachment(index)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <FileUp className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">No attachments added</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

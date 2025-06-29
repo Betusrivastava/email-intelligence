@@ -5,6 +5,7 @@ import { mongoService } from "./services/mongodb";
 import { extractOrganizationFromEmail } from "./services/openai";
 import { insertOrganizationSchema, updateOrganizationSchema } from "@shared/schema";
 import { z } from "zod";
+import { ObjectId } from "mongodb";
 
 const extractEmailSchema = z.object({
   emailContent: z.string().min(1, "Email content is required"),
@@ -111,32 +112,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update organization
-  app.put("/api/organizations/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = updateOrganizationSchema.parse(req.body);
-      
-      const organization = await storage.updateOrganization(id, updates);
-      
-      if (!organization) {
-        return res.status(404).json({
-          success: false,
-          message: "Organization not found"
-        });
-      }
+ app.put("/api/organizations/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = updateOrganizationSchema.parse(req.body);
+    const updated = await storage.updateOrganization(id, updateData);
 
-      res.json({
-        success: true,
-        data: organization
-      });
-    } catch (error) {
-      console.error("Update organization error:", error);
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to update organization"
-      });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Organization not found" });
     }
-  });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error("Update organization error:", error);
+    res.status(500).json({ success: false, message: "Failed to update organization" });
+  }
+});
 
   // Delete organization
   app.delete("/api/organizations/:id", async (req, res) => {
