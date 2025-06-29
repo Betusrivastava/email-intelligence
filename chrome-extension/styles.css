@@ -1,0 +1,91 @@
+/* Styles for Gmail Chrome Extension */
+
+.email-intelligence-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+  margin: 0 4px;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.email-intelligence-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+}
+
+.email-intelligence-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+}
+
+.email-intelligence-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.extract-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.extract-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.extract-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Floating button styles when injected into Gmail */
+.email-intelligence-btn[style*="position: fixed"] {
+  position: fixed !important;
+  top: 70px !important;
+  right: 20px !important;
+  z-index: 9999 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Integration with Gmail toolbar */
+.ar .email-intelligence-btn,
+.aqJ .email-intelligence-btn {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .email-intelligence-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-width: 120px;
+  }
+  
+  .extract-text {
+    font-size: 10px;
+  }
+}
