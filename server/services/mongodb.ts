@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
+import { MongoClient, Db, Collection, ObjectId as MongoObjectId } from 'mongodb';
 import type { Organization, InsertOrganization, UpdateOrganization } from '@shared/schema';
 
 export class MongoDBService {
@@ -7,7 +7,7 @@ export class MongoDBService {
   private organizations: Collection;
 
   constructor() {
-    const mongoUrl = process.env.DATABASE_URL || 'mongodb+srv://prachisri068:LvMPaEgy6bzzAMVf@cluster0.6gjts.mongodb.net/';
+    const mongoUrl = process.env.DATABASE_URL || 'mongodb+srv://prachisri068:LvMPaEgy6bzzAMVf@cluster0.6gjts.mongodb.net/email_intelligence?retryWrites=true&w=majority';
     this.client = new MongoClient(mongoUrl);
   }
 
@@ -27,22 +27,37 @@ export class MongoDBService {
     await this.client.close();
   }
 
-  async createOrganization(org: InsertOrganization): Promise<Organization> {
+  // Add this method to expose the database instance
+  getDb() {
+    if (!this.db) {
+      throw new Error('Database not connected. Call connect() first.');
+    }
+    return this.db;
+  }
+
+  // Helper method to create ObjectId
+  getObjectId(id?: string) {
+    return id ? new MongoObjectId(id) : new MongoObjectId();
+  }
+
+  async createOrganization(org: InsertOrganization): Promise<Organization | null> {
     const result = await this.organizations.insertOne({
       ...org,
+      _id: this.getObjectId(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     
     const created = await this.organizations.findOne({ _id: result.insertedId });
-    return this.transformMongoDoc(created);
+    return created ? this.transformMongoDoc(created) : null;
   }
 
   async getOrganization(id: string): Promise<Organization | null> {
     try {
-      const doc = await this.organizations.findOne({ _id: new ObjectId(id) });
-      return doc ? this.transformMongoDoc(doc) : null;
+      const organization = await this.organizations.findOne({ _id: this.getObjectId(id) });
+      return organization ? this.transformMongoDoc(organization) : null;
     } catch (error) {
+      console.error('Error fetching organization:', error);
       return null;
     }
   }
@@ -64,18 +79,13 @@ export class MongoDBService {
       console.log("Updates:", updates);
       
       const result = await this.organizations.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { 
-          $set: { 
-            ...updates, 
-            updatedAt: new Date() 
-          } 
-        },
+        { _id: this.getObjectId(id) },
+        { $set: { ...updates, updatedAt: new Date() } },
         { returnDocument: 'after' }
       );
       
       console.log("Update result:", result);
-      return result ? this.transformMongoDoc(result) : null;
+      return result ? this.transformMongoDoc(result.value) : null;
     } catch (error) {
       console.error("MongoDB update error:", error);
       throw error;
@@ -84,7 +94,7 @@ export class MongoDBService {
 
   async deleteOrganization(id: string): Promise<boolean> {
     try {
-      const result = await this.organizations.deleteOne({ _id: new ObjectId(id) });
+      const result = await this.organizations.deleteOne({ _id: this.getObjectId(id) });
       return result.deletedCount > 0;
     } catch (error) {
       return false;

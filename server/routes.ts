@@ -4,16 +4,100 @@ import { storage } from "./storage";
 import { mongoService } from "./services/mongodb";
 import { extractOrganizationFromEmail } from "./services/openai";
 import { insertOrganizationSchema, updateOrganizationSchema } from "@shared/schema";
+import { authService } from "./services/auth";
 import { z } from "zod";
 import { ObjectId } from "mongodb";
+import { authenticateToken } from "./middleware/auth";
 
 const extractEmailSchema = z.object({
   emailContent: z.string().min(1, "Email content is required"),
 });
 
+// Auth schemas
+const registerSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  name: z.string().min(1, 'Name is required'),
+});
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB connection
   await mongoService.connect();
+
+  // Auth routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { email, password, name } = registerSchema.parse(req.body);
+      const { token, userId } = await authService.register({ email, password, name });
+      
+      res.status(201).json({
+        success: true,
+        data: { token, userId }
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Registration failed'
+      });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      const { token, userId } = await authService.login(email, password);
+      
+      res.json({
+        success: true,
+        data: { token, userId }
+      });
+    } catch (error) {
+      res.status(401).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Login failed'
+      });
+    }
+  });
+
+  app.get('/api/auth/me', authenticateToken, async (req: any, res) => {
+    try {
+      console.log('GET /api/auth/me - User ID:', req.user.userId);
+      const user = await authService.getUser(req.user.userId);
+      
+      if (!user) {
+        console.error('User not found with ID:', req.user.userId);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      console.log('Returning user data for ID:', req.user.userId);
+      res.json({ 
+        success: true, 
+        data: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error in GET /api/auth/me:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch user data',
+        ...(process.env.NODE_ENV === 'development' && { error: errorMessage })
+      });
+    }
+  });
 
   // Extract organization information from email
   app.post("/api/extract", async (req, res) => {
