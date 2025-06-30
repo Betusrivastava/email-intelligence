@@ -179,28 +179,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const API_BASE_URL = 'http://localhost:5000/api';
-      console.log('Fetching user from:', `${API_BASE_URL}/auth/me`);
+      console.log('Fetching current user data from:', `${API_BASE_URL}/auth/me`);
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       
-      // The server might wrap the user data in a data property
-      const userData = response.data.data || response.data;
+      console.log('Current user response:', response.data);
       
+      // The server returns { success: true, data: { user object } }
+      const userData = response.data?.data || response.data;
       if (!userData) {
-        throw new Error('No user data received');
+        throw new Error('Invalid user data format');
       }
       
-      console.log('Fetched user data:', userData);
-      setUser(userData);
+      // Ensure we have a consistent user object
+      const user = {
+        _id: userData._id,
+        email: userData.email,
+        name: userData.name || userData.email?.split('@')[0] || 'User' // Fallback to email prefix if name is not set
+      };
+      
+      console.log('Fetched user data:', user);
+      setUser(user);
+      setLoading(false);
     } catch (err) {
       console.error('Failed to fetch user', err);
       localStorage.removeItem('token');
       setToken(null);
+      setUser(null);
       setError('Session expired. Please log in again.');
-    } finally {
       setLoading(false);
     }
   }, []);
@@ -226,4 +235,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = () =>
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
