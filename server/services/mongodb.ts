@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection, ObjectId as MongoObjectId } from 'mongodb';
+import { MongoClient, Db, Collection,ObjectId, ObjectId as MongoObjectId } from 'mongodb';
 import type { Organization, InsertOrganization, UpdateOrganization } from '@shared/schema';
 
 export class MongoDBService {
@@ -73,25 +73,29 @@ export class MongoDBService {
     return docs.map(doc => this.transformMongoDoc(doc));
   }
 
-  async updateOrganization(id: string, updates: UpdateOrganization): Promise<Organization | null> {
+ async updateOrganization(id: string, updates: UpdateOrganization): Promise<Organization | null> {
     try {
       console.log("Updating organization with ID:", id);
       console.log("Updates:", updates);
       
       const result = await this.organizations.findOneAndUpdate(
-        { _id: this.getObjectId(id) },
-        { $set: { ...updates, updatedAt: new Date() } },
+        { _id: new ObjectId(id) },
+        { 
+          $set: { 
+            ...updates, 
+            updatedAt: new Date() 
+          } 
+        },
         { returnDocument: 'after' }
       );
       
       console.log("Update result:", result);
-      return result ? this.transformMongoDoc(result.value) : null;
+      return result ? this.transformMongoDoc(result) : null;
     } catch (error) {
       console.error("MongoDB update error:", error);
       throw error;
     }
   }
-
   async deleteOrganization(id: string): Promise<boolean> {
     try {
       const result = await this.organizations.deleteOne({ _id: this.getObjectId(id) });

@@ -196,22 +196,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update organization
- app.put("/api/organizations/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = updateOrganizationSchema.parse(req.body);
-    const updated = await storage.updateOrganization(id, updateData);
-
-    if (!updated) {
-      return res.status(404).json({ success: false, message: "Organization not found" });
+  app.put('/api/organizations/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = updateOrganizationSchema.parse(req.body);
+      
+      console.log(`Updating organization with ID: ${id}`);
+      console.log('Updates:', updates);
+      
+      const updated = await storage.updateOrganization(id, updates);
+      
+      if (!updated) {
+        console.log(`Organization not found with ID: ${id}`);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Organization not found' 
+        });
+      }
+      
+      console.log('Update successful:', updated);
+      res.json({ 
+        success: true, 
+        data: updated 
+      });
+      
+    } catch (error: unknown) {
+      console.error('Update organization error:', error);
+      
+      let statusCode = 500;
+      let message = 'Failed to update organization';
+      let errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
+        statusCode = 400;
+        message = 'Invalid organization data';
+      }
+      
+      const response: any = {
+        success: false,
+        message
+      };
+      
+      if (process.env.NODE_ENV !== 'production') {
+        response.error = errorMessage;
+      }
+      
+      res.status(statusCode).json(response);
     }
-
-    res.json({ success: true, data: updated });
-  } catch (error) {
-    console.error("Update organization error:", error);
-    res.status(500).json({ success: false, message: "Failed to update organization" });
-  }
-});
+  });
 
   // Delete organization
   app.delete("/api/organizations/:id", async (req, res) => {
